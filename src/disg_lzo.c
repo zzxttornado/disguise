@@ -73,13 +73,13 @@ int disg_lzo_init(void)
 		DISG_ERR("Can't initialize compressor");
 		return 1;
 	}
-	if (!(wmem = lzo_malloc(mem)))
+	if (!(wmem = lzo_malloc(mem*8)))
 	{
 		DISG_ERR("Can't allocate buffer for the compressor");
 		return 1;
 	}
 
-	DISG_DBG("LZO compression[level %d] initialized", zlevel);
+//	DISG_INFO("LZO compression[level %d] initialized", zlevel);
 
 	return 0;
 }

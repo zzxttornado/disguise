@@ -12,21 +12,31 @@
 #define DISG_MAX_PORT	16384
 
 #include <poll.h>
+#include <time.h>
 
 #define DISG_PKT_HDR_MAGIC_DATA		0xEF3A9E23
 #define DISG_PKT_HDR_MAGIC_PING		0xEF3A9E24
 #define DISG_PKT_HDR_MAGIC_PING_ACK		0xEF3A9E25
+#define DISG_PKT_HDR_MAGIC_PING_BACK		0xEF3A9E26
 #define DISG_UDP_RCV_BUF_SIZE	65536
 
 #define DISG_PKT_FLAG_FRAG			1
 #define DISG_PKT_FLAG_FRAG_END		2
 
+#undef DISG_LZO_SUPPORT
+
 #pragma pack(1)
 typedef struct disg_pkt_hdr_s
 {
 	uint32_t magic;
-	uint32_t pkt_id;
-	uint8_t flag;
+	uint16_t crc;
+	uint16_t pkt_id;
+#ifdef DISG_LZO_SUPPORT
+	uint8_t frag:7;
+	uint8_t lzo:1;
+#else
+	uint8_t frag;
+#endif
 	uint8_t seq;
 	uint16_t size;
 }disg_pkt_hdr;
@@ -35,7 +45,7 @@ typedef struct disg_pkt_hdr_frag_s
 {
 
 	disg_pkt_hdr	hdr;
-	char			lzobuf[DISG_UDP_RCV_BUF_SIZE*2];
+	uint8_t			lzobuf[DISG_UDP_RCV_BUF_SIZE*2];
 }disg_pkt_frag;
 
 typedef struct disg_pkt_frag_node_s
@@ -52,6 +62,7 @@ typedef struct disg_arg_s
 {
 	char*		device;
 	char*		peer;
+	char*		stats_path;
 	int			base_port;
 	int			udp_port_cnt;
 	int			sctp_port;
@@ -59,6 +70,9 @@ typedef struct disg_arg_s
 	uint32_t	verbose;
 	bool		sctp_port_enable;
 	bool		extra_frag;
+#ifdef DISG_LZO_SUPPORT
+	bool		lzo;
+#endif
 }disg_arg;
 
 typedef struct disg_conn_s
@@ -71,7 +85,7 @@ typedef struct disg_conn_s
 
 	int	tx_fail_cnt;
 	int ping_fail_cnt;
-	int state;
+	int failed;
 
 }disg_conn;
 
@@ -82,11 +96,18 @@ typedef struct disg_stats_s
 	uint64_t	tun_rx;
 	uint64_t	tun_tx;
 	uint64_t	ip_rx;
+	uint64_t	ping_rx;
+	uint64_t	noise_rx;
 	uint64_t	ip_tx;
 	uint64_t	tun_rx_bytes;
 	uint64_t	tun_tx_bytes;
 	uint64_t	ip_rx_bytes;
 	uint64_t	ip_tx_bytes;
+	uint64_t	crc_error;
+	uint64_t	gap;
+	uint64_t	ooo;
+	uint64_t	dup;
+	uint32_t	frag_list_cnt;
 }disg_stats;
 
 typedef struct disg_svr_s
@@ -107,14 +128,16 @@ typedef struct disg_svr_s
 	int		sctp_client_fail;
 //	struct disg_conn_s sctp_client_conn;
 	struct disg_conn_s* sctp_conn;
+	uint32_t	conn_list_id_curr;
 	disg_conn_ptr p_conn_list[DISG_MAX_PORT];
+	disg_conn_ptr p_conn_list_by_sock[DISG_MAX_PORT];
 
 	struct pollfd pollfd_arr[DISG_MAX_PORT+1];
 	uint16_t	pollfd_cnt;
 	uint16_t	pollfd_sctp_listen;
 	uint16_t	pollfd_sctp_conn_base;
 
-	char			decomp_buf[DISG_UDP_RCV_BUF_SIZE*2];
+	uint8_t			decomp_buf[DISG_UDP_RCV_BUF_SIZE*2];
 	char			tun_rcv_buf[DISG_UDP_RCV_BUF_SIZE];
 	disg_pkt_frag rx_pkt;
 
@@ -132,9 +155,12 @@ typedef struct disg_svr_s
 	struct sockaddr_in recv_addr;
 	socklen_t saddr_len;
 
-	int last_timer_sec;
+	time_t		last_timer_sec;
+	struct tm	time_tm;
+	char		time_str[64];
 	disg_stats	stats_old;
 	disg_stats	stats;
+	char		stats_file[512];
 }disg_svr;
 
 disg_svr* disg_svr_create(disg_arg* p_arg);

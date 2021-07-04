@@ -39,7 +39,11 @@ typedef enum disg_arg_type_e
 	DISG_OPT_SCTP_PORT,
 	DISG_OPT_EXTRA_FRAG,
 	DISG_OPT_PEER,
+	DISG_OPT_STATS_PATH,
 	DISG_OPT_MAX_PING_FAIL,
+#ifdef DISG_LZO_SUPPORT
+	DISG_OPT_LZO,
+#endif
 	DISG_OPT_VERBOSE,
 }disg_arg_type;
 
@@ -59,10 +63,14 @@ int main(int argc, const char* argv[])
 			.udp_port_cnt	= 0,
 			.sctp_port	= 0,
 			.sctp_port_enable	= false,
-			.max_ping_fail = 5,
+			.stats_path = "/dev/shm/",
+			.max_ping_fail = 8,
 			.verbose	= 1,
 			.peer		= NULL,
 			.extra_frag	= false,
+#ifdef DISG_LZO_SUPPORT
+			.lzo		= false,
+#endif
 	};
 
 	disg_svr* p_svr;
@@ -81,8 +89,14 @@ int main(int argc, const char* argv[])
 				"Enable sctp and specify sctp port", "number" },
 		{ "max-ping-fail",	'F', POPT_ARG_INT,	&arg.max_ping_fail,		DISG_OPT_MAX_PING_FAIL,
 				"Max ping fail before switching to a different port", "number" },
+		{ "stats-path",	's', POPT_ARG_STRING | POPT_ARGFLAG_SHOW_DEFAULT,	&arg.stats_path,		DISG_OPT_STATS_PATH,
+				"Path for saving stats", "path" },
 		{ "extra-frag",	'x', POPT_ARG_NONE,		NULL,					DISG_OPT_EXTRA_FRAG,
 				"Add an extra fragment package", NULL },
+#ifdef DISG_LZO_SUPPORT
+		{ "enable-lzo",	'l', POPT_ARG_NONE,		NULL,					DISG_OPT_LZO,
+				"Enable lzo compression", NULL },
+#endif
 		{ "verbose",	'v', POPT_ARG_NONE,		NULL,					DISG_OPT_VERBOSE,
 				"Verbose printing, will print a stats line per second", NULL },
 		POPT_AUTOHELP
@@ -135,6 +149,13 @@ int main(int argc, const char* argv[])
 			break;
 		case DISG_OPT_MAX_PING_FAIL:
 			break;
+		case DISG_OPT_STATS_PATH:
+			break;
+#ifdef DISG_LZO_SUPPORT
+		case DISG_OPT_LZO:
+			arg.lzo = true;
+			break;
+#endif
 		case DISG_OPT_VERBOSE:
 			arg.verbose ++;
 			break;
