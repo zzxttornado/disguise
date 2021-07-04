@@ -714,7 +714,7 @@ NXT_FRAG:
 
 	if(p_head == NULL)
 	{//reaching end of loop, we need to insert it to the tail
-		p_svr->stats.frag_list
+		//p_svr->stats.frag_list
 		DISG_FRAG_DBG(p_rx_node, "FRAG RCV, chain afterb %08x.%u",
 				p_prev?p_prev->pkt.hdr.pkt_id:0, p_prev?p_prev->pkt.hdr.seq:0);
 		disg_svr_process_chain_frag_after(p_svr, p_prev, p_rx_node);
