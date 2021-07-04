@@ -1,13 +1,26 @@
 #!/bin/bash
 
 #set -x
-HOME_PORT=14000
 HOME_DEV=tun1
-FILE_PORT=24000
-#FILE_PORT=177
 FILE_DEV=tun0
-SILC_PORT=11467
 SILC_DEV=tun2
+if [ "$(cat /etc/disg_type)" == "1" ]; then
+HOME_PORT=14000
+HOME_IP=192.168.39.9/30
+HOME_NET=192.168.39.8/30
+FILE_PORT=24000
+FILE_IP=192.168.39.1/30
+FILE_NET=192.168.39.8/30
+SILC_PORT=11467
+else
+HOME_PORT=14500
+HOME_IP=192.168.39.13/30
+HOME_NET=192.168.39.12/30
+FILE_PORT=23200
+FILE_IP=192.168.39.5/30
+FILE_NET=192.168.39.4/30
+SILC_PORT=11467
+fi
 
 function stop_disg
 {
@@ -45,8 +58,8 @@ function start_disg
 		disown
 
 		sleep 1
-		ifconfig ${HOME_DEV} 192.168.39.9/30
-		route add -net 192.168.39.8/30 ${HOME_DEV}
+		ifconfig ${HOME_DEV} ${HOME_IP}
+		route add -net ${HOME_NET} ${HOME_DEV}
 		route add -net 192.168.47.0/24 ${HOME_DEV}
 		;;
 	silc)
@@ -65,9 +78,9 @@ function start_disg
 		disown
 		sleep 1
 
-		ifconfig ${FILE_DEV} 192.168.39.1/30
+		ifconfig ${FILE_DEV} ${FILE_IP}
 		route add -net 192.168.23.0/24 ${FILE_DEV}
-		route add -net 192.168.39.0/30 ${FILE_DEV}
+		route add -net ${FILE_NET} ${FILE_DEV}
 		route add -net 192.168.49.0/24 ${FILE_DEV}
 		route add -net 192.168.51.0/24 ${FILE_DEV}
 		route add -net 192.168.159.0/24 ${FILE_DEV}
